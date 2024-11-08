@@ -1,34 +1,15 @@
 <?php
-include 'db.php'; // Database connection
+include 'db.php';
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $action = $_POST['action'];
+$id = $_POST['id'];
+$reason = $_POST['reason'];
 
-    if ($action == 'cancel') {
-        $id = $_POST['id'];
-        $lotId = $_POST['lotId'];
-        $name = $_POST['name'];
-        $reason = $_POST['reason'];
+$query = $conn->prepare("UPDATE reservations SET status = 'Canceled', cancellation_reason = ? WHERE id = ?");
+$query->bind_param("si", $reason, $id);
 
-        // Optionally, you can store the cancellation reason in the database or just update the status
-        $query = "UPDATE reservations SET status = 'Cancelled', cancellation_reason = ? WHERE id = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("si", $reason, $id);
-
-        if ($stmt->execute()) {
-            // If needed, you can log this cancellation for auditing purposes
-            // You can also send a notification or take other actions after cancellation
-
-            echo json_encode([
-                "success" => true,
-                "message" => "Reservation for Lot ID: $lotId, Name: $name has been canceled. Reason: $reason."
-            ]);
-        } else {
-            echo json_encode([
-                "success" => false,
-                "message" => "Failed to cancel reservation."
-            ]);
-        }
-    }
+if ($query->execute()) {
+    echo json_encode(["status" => "success"]);
+} else {
+    echo json_encode(["status" => "error", "message" => "Failed to cancel reservation."]);
 }
 ?>

@@ -1,7 +1,6 @@
 <?php
-include 'db.php'; // Database connection
+include('db.php');
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,7 +30,7 @@ include 'db.php'; // Database connection
         </thead>
         <tbody>
             <?php
-            $result = $conn->query("SELECT * FROM reservations");
+            $result = $conn->query( "SELECT * FROM reservations");
             while ($row = $result->fetch_assoc()) {
                 echo "<tr>";
                 echo "<td>" . $row['id'] . "</td>";
@@ -56,6 +55,7 @@ include 'db.php'; // Database connection
 </div>
 
 <!-- Modals for Update, View, and Cancel Actions -->
+
 <!-- Update Reservation Modal -->
 <div class="modal fade" id="updateModal" tabindex="-1" role="dialog" aria-labelledby="updateModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -137,9 +137,6 @@ include 'db.php'; // Database connection
                     <input type="time" class="form-control" id="viewTime" readonly>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            </div>
         </div>
     </div>
 </div>
@@ -155,15 +152,6 @@ include 'db.php'; // Database connection
                 </button>
             </div>
             <div class="modal-body">
-                <input type="hidden" id="cancelId">
-                <div class="form-group">
-                    <label for="cancelLotId">Lot ID</label>
-                    <input type="text" class="form-control" id="cancelLotId" readonly>
-                </div>
-                <div class="form-group">
-                    <label for="cancelName">Name</label>
-                    <input type="text" class="form-control" id="cancelName" readonly>
-                </div>
                 <div class="form-group">
                     <label for="cancelReason">Reason for Cancellation</label>
                     <textarea class="form-control" id="cancelReason" rows="3"></textarea>
@@ -178,92 +166,105 @@ include 'db.php'; // Database connection
 </div>
 
 <script>
-$(document).ready(function() {
-    // Common function to open modal and populate data
-    function openModal(modalId, data) {
-        for (let key in data) {
-            $(`#${modalId} #${key}`).val(data[key]);
-        }
-        $(`#${modalId}`).modal('show');
-    }
-
-    // Update button action
-    $('.btn-update').on('click', function() {
-        const id = $(this).data('id');
-        $.post('update_reservation.php', { action: 'fetch', id: id }, function(response) {
-            openModal('updateModal', response);
-        }, 'json');
-    });
-
-    // View button action
-    $('.btn-view').on('click', function() {
-        const id = $(this).data('id');
-        $.post('view_reservation.php', { id: id }, function(response) {
-            openModal('viewModal', response);
-        }, 'json');
-    });
-
-    // Delete button action
-    $('.btn-delete').on('click', function() {
-        const id = $(this).data('id');
-        if (confirm('Are you sure you want to delete this reservation?')) {
-            $.post('delete_reservation.php', { id: id }, function(response) {
+    $(document).ready(function() {
+        // Open view modal
+        $('.btn-view').on('click', function() {
+            var id = $(this).data('id');
+            $.get('view_reservation.php', { id: id }, function(response) {
                 if (response.success) {
-                    location.reload();
-                } else {
-                    alert('Error deleting reservation.');
+                    $('#viewLotId').val(response.data.lot_id);
+                    $('#viewName').val(response.data.name);
+                    $('#viewEmail').val(response.data.email);
+                    $('#viewContact').val(response.data.contact);
+                    $('#viewDate').val(response.data.date);
+                    $('#viewTime').val(response.data.time);
+                    $('#viewModal').modal('show');
                 }
-            }, 'json');
-        }
-    });
+            });
+        });
 
-    // Cancel button action
-    $('.btn-cancel').on('click', function() {
-        const id = $(this).data('id');
-        const lot_id = $(this).data('lot-id');
-        const name = $(this).data('name');
-        openModal('cancelModal', { cancelId: id, cancelLotId: lot_id, cancelName: name });
-    });
+        // Open update modal
+        $('.btn-update').on('click', function() {
+            var id = $(this).data('id');
+            $.get('update_reservation.php', { id: id }, function(response) {
+                if (response.success) {
+                    $('#updateId').val(response.data.id);
+                    $('#updateLotId').val(response.data.lot_id);
+                    $('#updateName').val(response.data.name);
+                    $('#updateEmail').val(response.data.email);
+                    $('#updateContact').val(response.data.contact);
+                    $('#updateDate').val(response.data.date);
+                    $('#updateTime').val(response.data.time);
+                    $('#updateModal').modal('show');
+                }
+            });
+        });
 
-    // Confirm update
-    $('#updateButton').on('click', function() {
-        const data = {
-            id: $('#updateId').val(),
-            lot_id: $('#updateLotId').val(),
-            name: $('#updateName').val(),
-            email: $('#updateEmail').val(),
-            contact: $('#updateContact').val(),
-            date: $('#updateDate').val(),
-            time: $('#updateTime').val()
-        };
-        $.post('update_reservation.php', { action: 'update', ...data }, function(response) {
-            if (response.success) {
-                $('#updateModal').modal('hide');
-                location.reload();
-            } else {
-                alert('Error updating reservation.');
+        // Update reservation
+        $('#updateButton').on('click', function() {
+            var id = $('#updateId').val();
+            var lot_id = $('#updateLotId').val();
+            var name = $('#updateName').val();
+            var email = $('#updateEmail').val();
+            var contact = $('#updateContact').val();
+            var date = $('#updateDate').val();
+            var time = $('#updateTime').val();
+            
+            $.post('update_reservation.php', {
+                id: id,
+                lot_id: lot_id,
+                name: name,
+                email: email,
+                contact: contact,
+                date: date,
+                time: time
+            }, function(response) {
+                if (response.success) {
+                    alert('Reservation updated successfully');
+                    location.reload(); // Reload page to show updated data
+                } else {
+                    alert(response.message);
+                }
+            });
+        });
+
+        // Delete reservation
+        $('.btn-delete').on('click', function() {
+            var id = $(this).data('id');
+            if (confirm('Are you sure you want to delete this reservation?')) {
+                $.post('delete_reservation.php', { id: id }, function(response) {
+                    if (response.success) {
+                        alert('Reservation deleted successfully');
+                        location.reload();
+                    } else {
+                        alert(response.message);
+                    }
+                });
             }
-        }, 'json');
-    });
+        });
 
-    // Confirm cancel
-    $('#cancelButton').on('click', function() {
-        const data = {
-            id: $('#cancelId').val(),
-            reason: $('#cancelReason').val()
-        };
-        $.post('cancel_reservation.php', data, function(response) {
-            if (response.success) {
-                $('#cancelModal').modal('hide');
-                location.reload();
-            } else {
-                alert('Error canceling reservation.');
-            }
-        }, 'json');
+        // Cancel reservation
+        $('.btn-cancel').on('click', function() {
+            var id = $(this).data('id');
+            $('#cancelButton').data('id', id);  // Store the ID for cancel action
+            $('#cancelModal').modal('show');
+        });
+
+        $('#cancelButton').on('click', function() {
+            var id = $(this).data('id');
+            var reason = $('#cancelReason').val();
+            $.post('cancel_reservation.php', { id: id, reason: reason }, function(response) {
+                if (response.success) {
+                    alert('Reservation cancelled successfully');
+                    location.reload(); // Reload to update reservation status
+                } else {
+                    alert(response.message);
+                }
+            });
+        });
     });
-});
 </script>
 
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
