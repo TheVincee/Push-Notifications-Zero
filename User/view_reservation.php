@@ -1,14 +1,24 @@
 <?php
-include 'db.php';
+include('db.php');
 
-$id = $_GET['id'];
-$sql = "SELECT * FROM reservations WHERE id = $id";
-$result = $conn->query($sql);
-
-if ($result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    echo json_encode(['success' => true, 'data' => $row]);
+if (isset($_GET['id'])) {
+    $id = $_GET['id'];
+    
+    // Query to fetch the reservation details
+    $query = "SELECT * FROM reservations WHERE id = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        // Return data as JSON
+        echo json_encode(['success' => true, 'data' => $row]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Reservation not found']);
+    }
 } else {
-    echo json_encode(['success' => false, 'message' => 'Reservation not found']);
+    echo json_encode(['success' => false, 'message' => 'No ID provided']);
 }
 ?>

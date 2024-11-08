@@ -152,6 +152,19 @@ include('db.php');
                 </button>
             </div>
             <div class="modal-body">
+                <!-- Lot ID Input -->
+                <div class="form-group">
+                    <label for="cancelLotId">Lot ID</label>
+                    <input type="text" class="form-control" id="cancelLotId" readonly>
+                </div>
+                
+                <!-- Name Input -->
+                <div class="form-group">
+                    <label for="cancelName">Name</label>
+                    <input type="text" class="form-control" id="cancelName" readonly>
+                </div>
+
+                <!-- Reason for Cancellation -->
                 <div class="form-group">
                     <label for="cancelReason">Reason for Cancellation</label>
                     <textarea class="form-control" id="cancelReason" rows="3"></textarea>
@@ -165,23 +178,49 @@ include('db.php');
     </div>
 </div>
 
+
+
 <script>
-    $(document).ready(function() {
-        // Open view modal
-        $('.btn-view').on('click', function() {
-            var id = $(this).data('id');
-            $.get('view_reservation.php', { id: id }, function(response) {
-                if (response.success) {
-                    $('#viewLotId').val(response.data.lot_id);
-                    $('#viewName').val(response.data.name);
-                    $('#viewEmail').val(response.data.email);
-                    $('#viewContact').val(response.data.contact);
-                    $('#viewDate').val(response.data.date);
-                    $('#viewTime').val(response.data.time);
-                    $('#viewModal').modal('show');
-                }
-            });
-        });
+   $(document).ready(function() {
+    // Open view modal
+    // Open view modal
+$('.btn-view').on('click', function() {
+    var id = $(this).data('id');
+
+    // Make the AJAX request to fetch the reservation data
+    $.get('view_reservation.php', { id: id }, function(response) {
+        console.log(response);  // Log the response to inspect it
+        
+        try {
+            var data = JSON.parse(response);  // Ensure the response is parsed correctly
+            if (data.success) {
+                // Populate the modal with the fetched data
+                $('#viewLotId').val(data.data.lot_id || '');  // Fallback to empty string if value is missing
+                $('#viewName').val(data.data.name || '');
+                $('#viewEmail').val(data.data.email || '');
+                $('#viewContact').val(data.data.contact || '');
+                $('#viewDate').val(data.data.date || '');
+                $('#viewTime').val(data.data.time || '');
+                
+                // Show the modal
+                $('#viewModal').modal('show');
+            } else {
+                // If there's an error, you can show an alert or log an error message
+                alert('Error: ' + data.message);
+            }
+        } catch (e) {
+            console.error('Error parsing response:', e);
+            alert('An error occurred while fetching the reservation details.');
+        }
+    }).fail(function() {
+        // Handle AJAX failure
+        alert('An error occurred while fetching the reservation details.');
+    });
+});
+
+
+
+
 
         // Open update modal
         $('.btn-update').on('click', function() {
