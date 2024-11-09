@@ -136,10 +136,16 @@ include('db.php');
                     <label for="viewTime">Time</label>
                     <input type="time" class="form-control" id="viewTime" readonly>
                 </div>
+                <!-- Added View Status -->
+                <div class="form-group">
+                    <label for="viewStatus">Status</label>
+                    <input type="text" class="form-control" id="viewStatus" readonly>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
 
 <!-- Cancel Reservation Modal -->
 <div class="modal fade" id="cancelModal" tabindex="-1" role="dialog" aria-labelledby="cancelModalLabel" aria-hidden="true">
@@ -201,6 +207,7 @@ $('.btn-view').on('click', function() {
                 $('#viewContact').val(data.data.contact || '');
                 $('#viewDate').val(data.data.date || '');
                 $('#viewTime').val(data.data.time || '');
+                
                 
                 // Show the modal
                 $('#viewModal').modal('show');

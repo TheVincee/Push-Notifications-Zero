@@ -2,7 +2,7 @@
 // Database connection
 $conn = new mysqli("localhost", "root", "", "push");
 
-// Check if there's an error with the database connection
+// Check for connection errors
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
@@ -36,11 +36,15 @@ if ($reservation_result->num_rows > 0) {
             text-align: center;
             line-height: 100px;
             font-weight: bold;
+            transition: background-color 0.3s ease;
         }
         .reserved {
             background-color: green !important;
             color: white;
             cursor: not-allowed; /* Disable click for reserved lots */
+        }
+        .lot-box:hover:not(.reserved) {
+            background-color: #4CAF50; /* Highlight unreserved lots on hover */
         }
     </style>
 </head>
@@ -103,57 +107,64 @@ if ($reservation_result->num_rows > 0) {
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
 <script>
-    $(document).ready(function() {
-        // When a lot box is clicked, open the modal for reservation
-        $('.lot-box').click(function() {
-            var lotId = $(this).data('lot-id');
+  $(document).ready(function() {
+    // When a lot box is clicked, open the modal for reservation
+    $('.lot-box').click(function() {
+        var lotId = $(this).data('lot-id');
 
-            // Check if the lot is already reserved
-            if ($(this).hasClass('reserved')) {
-                $('#modal-error-message').text('This lot is already reserved. Please select another lot.').show();
-                $('#modal-success-message').hide();
-                return; // Exit function if lot is reserved
-            }
+        // Check if the lot is already reserved
+        if ($(this).hasClass('reserved')) {
+            $('#modal-error-message').text('This lot is already reserved. Please select another lot.').show();
+            $('#modal-success-message').hide();
+            return; // Exit function if lot is reserved
+        }
 
-            $('#reservationRequestForm')[0].reset(); // Clear the form fields
-            $('#lotId').val(lotId); // Set the lot ID in the hidden input
-            $('#modal-error-message').hide(); // Hide error message
-            $('#modal-success-message').hide(); // Hide success message
-            $('#requestModal').modal('show'); // Show the modal
-        });
-
-        // Submit the reservation form
-        $('#reservationRequestForm').submit(function(e) {
-            e.preventDefault(); // Prevent default form submission
-            $.ajax({
-                url: 'Reserve.php', // PHP file for reservation handling
-                method: 'POST',     // Submission method
-                data: $(this).serialize(), // Get form data
-                success: function(response) {
-                    try {
-                        response = JSON.parse(response);
-                        if (response.status === 'success') {
-                            let lotId = $('#lotId').val(); // Get the reserved lot ID
-                            $('#lot-' + lotId).addClass('reserved').off('click'); // Mark lot as reserved and disable click
-                            $('#requestModal').modal('hide'); // Hide the modal
-                            $('#modal-success-message').text('Your reservation was successful!').show();
-                            $('#modal-error-message').hide(); // Hide error message if successful
-                        } else {
-                            $('#modal-error-message').text(response.message || 'Reservation failed. Please try again.').show();
-                            $('#modal-success-message').hide(); // Hide success message if failed
-                        }
-                    } catch (e) {
-                        $('#modal-error-message').text('Error processing response. Please try again later.').show();
-                        $('#modal-success-message').hide();
-                    }
-                },
-                error: function() {
-                    $('#modal-error-message').text('Error occurred. Please try again later.').show();
-                    $('#modal-success-message').hide();
-                }
-            });
-        });
+        $('#reservationRequestForm')[0].reset(); // Clear the form fields
+        $('#lotId').val(lotId); // Set the lot ID in the hidden input
+        $('#modal-error-message').hide(); // Hide error message
+        $('#modal-success-message').hide(); // Hide success message
+        $('#modal-loading-message').hide(); // Hide loading message
+        $('#requestModal').modal('show'); // Show the modal
     });
+
+    // Submit the reservation form
+    $('#reservationRequestForm').submit(function(e) {
+        e.preventDefault(); // Prevent default form submission
+
+        // Display loading message or spinner while the request is being processed
+        $('#modal-success-message').hide();
+        $('#modal-error-message').hide();
+        $('#modal-loading-message').text('Processing your reservation...').show(); // Assuming you have an element for a loading message
+
+        $.ajax({
+    url: 'Reserve.php', 
+    method: 'POST',
+    data: $(this).serialize(),
+    dataType: 'json', // Expect JSON response
+    success: function(response) {
+        $('#modal-loading-message').hide(); // Hide loading message
+
+        if (response.status === 'success') {
+            let lotId = $('#lotId').val();
+            $('#lot-' + lotId).addClass('reserved').off('click'); // Mark lot as reserved
+            $('#requestModal').modal('hide');
+            $('#modal-success-message').text(response.message).show();
+            $('#modal-error-message').hide();
+        } else {
+            $('#modal-error-message').text(response.message).show();
+            $('#modal-success-message').hide();
+        }
+    },
+    error: function(xhr, status, error) {
+        $('#modal-loading-message').hide(); // Hide loading message
+        $('#modal-error-message').text('Error occurred: ' + error + '. Please try again later.').show();
+        $('#modal-success-message').hide();
+    }
+});
+
+    });
+});
+
 </script>
 
 </body>
