@@ -84,7 +84,7 @@ if ($reservation_result->num_rows > 0) {
                 <input type="email" class="form-control" id="email" name="email" required>
             </div>
             <div class="form-group">
-                <label for="contact"> Number</label>
+                <label for="contact">Contact Number</label>
                 <input type="text" class="form-control" id="contact" name="contact" required>
             </div>
             <div class="form-group">
@@ -130,15 +130,21 @@ if ($reservation_result->num_rows > 0) {
                 method: 'POST',     // Submission method
                 data: $(this).serialize(), // Get form data
                 success: function(response) {
-                    if (response.trim() === 'success') {
-                        let lotId = $('#lotId').val(); // Get the reserved lot ID
-                        $('#lot-' + lotId).addClass('reserved').off('click'); // Mark lot as reserved and disable click
-                        $('#requestModal').modal('hide'); // Hide the modal
-                        $('#modal-success-message').text('Your reservation was successful!').show();
-                        $('#modal-error-message').hide(); // Hide error message if successful
-                    } else {
-                        $('#modal-error-message').text('Sorry, reservation failed. Please try again.').show();
-                        $('#modal-success-message').hide(); // Hide success message if failed
+                    try {
+                        response = JSON.parse(response);
+                        if (response.status === 'success') {
+                            let lotId = $('#lotId').val(); // Get the reserved lot ID
+                            $('#lot-' + lotId).addClass('reserved').off('click'); // Mark lot as reserved and disable click
+                            $('#requestModal').modal('hide'); // Hide the modal
+                            $('#modal-success-message').text('Your reservation was successful!').show();
+                            $('#modal-error-message').hide(); // Hide error message if successful
+                        } else {
+                            $('#modal-error-message').text(response.message || 'Reservation failed. Please try again.').show();
+                            $('#modal-success-message').hide(); // Hide success message if failed
+                        }
+                    } catch (e) {
+                        $('#modal-error-message').text('Error processing response. Please try again later.').show();
+                        $('#modal-success-message').hide();
                     }
                 },
                 error: function() {

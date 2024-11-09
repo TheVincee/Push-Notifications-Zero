@@ -268,19 +268,26 @@ $('.btn-view').on('click', function() {
         });
 
         // Delete reservation
-        $('.btn-delete').on('click', function() {
-            var id = $(this).data('id');
-            if (confirm('Are you sure you want to delete this reservation?')) {
-                $.post('delete_reservation.php', { id: id }, function(response) {
-                    if (response.success) {
-                        alert('Reservation deleted successfully');
-                        location.reload();
-                    } else {
-                        alert(response.message);
-                    }
-                });
-            }
-        });
+        $(document).ready(function() {
+    // Event listener for delete buttons
+    $('.btn-delete').on('click', function() {
+        var id = $(this).data('id'); // Assuming each delete button has a data-id attribute with the reservation ID
+
+        if (confirm("Are you sure you want to delete this reservation?")) {
+            $.post('delete_reservation.php', { id: id }, function(response) {
+                if (response.success) {
+                    alert(response.message);
+                    location.reload(); // Reload the page to reflect changes
+                } else {
+                    alert(response.message || "An error occurred while deleting the reservation.");
+                }
+            }, 'json').fail(function() {
+                alert("Failed to communicate with the server. Please try again.");
+            });
+        }
+    });
+});
+
 
         // Cancel reservation
         $(document).ready(function() {

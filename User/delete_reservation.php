@@ -1,4 +1,4 @@
-<?php
+<?php 
 include 'db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
@@ -14,4 +14,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
 } else {
     echo json_encode(["success" => false, "message" => "Invalid request."]);
 }
+
+$conn->close(); // Close the database connection
 ?>
