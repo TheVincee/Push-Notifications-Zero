@@ -283,24 +283,44 @@ $('.btn-view').on('click', function() {
         });
 
         // Cancel reservation
-        $('.btn-cancel').on('click', function() {
-            var id = $(this).data('id');
-            $('#cancelButton').data('id', id);  // Store the ID for cancel action
-            $('#cancelModal').modal('show');
-        });
+        $(document).ready(function() {
+    // Click event for cancel buttons
+    $('.btn-cancel').on('click', function() {
+        var id = $(this).data('id');
+        var lotId = $(this).data('lot-id');  // Get lot_id from data attribute
+        var name = $(this).data('name');     // Get name from data attribute
 
-        $('#cancelButton').on('click', function() {
-            var id = $(this).data('id');
-            var reason = $('#cancelReason').val();
-            $.post('cancel_reservation.php', { id: id, reason: reason }, function(response) {
-                if (response.success) {
-                    alert('Reservation cancelled successfully');
-                    location.reload(); // Reload to update reservation status
-                } else {
-                    alert(response.message);
-                }
-            });
+        $('#cancelButton').data('id', id);   // Set id in cancel button
+        $('#cancelLotId').val(lotId);        // Populate lot_id in modal
+        $('#cancelName').val(name);          // Populate name in modal
+        
+        $('#cancelModal').modal('show');     // Show cancel modal
+    });
+
+    // Click event for the confirmation button in the modal
+    $('#cancelButton').on('click', function() {
+        var id = $(this).data('id');
+        var reason = $('#cancelReason').val().trim();  // Get cancellation reason
+
+        if (!reason) {
+            alert("Please provide a reason for cancellation.");
+            return;
+        }
+
+        $.post('cancel_reservation.php', { id: id, reason: reason }, function(response) {
+            if (response.status === 'success') {
+                alert('Reservation cancelled successfully. Lot ID: ' + response.lot_id + ', Name: ' + response.Name); 
+                location.reload();  // Reload page to reflect changes
+            } else {
+                alert(response.message || "An error occurred while cancelling the reservation.");
+            }
+        }, 'json').fail(function() {
+            alert("Failed to communicate with the server. Please try again.");
         });
+    });
+});
+
+
     });
 </script>
 
