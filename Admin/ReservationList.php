@@ -1,12 +1,10 @@
 <?php 
 $conn = new mysqli("localhost", "root", "", "push");
 
-// Check for connection errors
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Fetch reservations
 $reservations_query = "SELECT id, lot_id, name, email, contact, date, time, status FROM reservations";
 $reservations_result = $conn->query($reservations_query);
 ?>
@@ -69,21 +67,22 @@ $reservations_result = $conn->query($reservations_query);
             </div>
             <div class="modal-body">
                 <form id="editStatusForm">
-                    <input type="hidden" id="reservationId" name="id">
+                    <div class="form-group">
+                        <label for="id">ID</label>
+                        <input type="text" class="form-control" id="id" name="id" readonly>
+                    </div>
 
-                    <!-- Display Lot ID and Name as Read-Only Fields -->
                     <div class="form-group">
                         <label for="lotIdDisplay">Lot ID</label>
-                        <input type="text" class="form-control" id="lotIdDisplay" name="lot_id_display" readonly>
+                        <input type="text" class="form-control" id="lotIdDisplay" readonly>
                     </div>
                     <div class="form-group">
                         <label for="nameDisplay">Name</label>
-                        <input type="text" class="form-control" id="nameDisplay" name="name_display" readonly>
+                        <input type="text" class="form-control" id="nameDisplay" readonly>
                     </div>
-
                     <div class="form-group">
                         <label for="status">Status</label>
-                        <select class="form-control" id="status" name="status">
+                        <select class="form-control" id="status">
                             <option value="In Progress">In Progress</option>
                             <option value="Approved">Approved</option>
                             <option value="Rejected">Rejected</option>
@@ -137,10 +136,6 @@ $reservations_result = $conn->query($reservations_query);
                         <label for="viewStatus">Status</label>
                         <input type="text" class="form-control" id="viewStatus" readonly>
                     </div>
-                    <div class="form-group">
-                        <label for="viewCancellationReason">Cancellation Reason</label>
-                        <textarea class="form-control" id="viewCancellationReason" rows="3" readonly></textarea>
-                    </div>
                 </form>
             </div>
         </div>
@@ -151,91 +146,58 @@ $reservations_result = $conn->query($reservations_query);
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
 
 <script>
-$(document).ready(function () {
-    // When Edit button is clicked, populate the modal with reservation data
+$(document).ready(function() {
+    // When the 'Save Changes' button is clicked in the Edit Status modal
+    $('#editStatusForm').on('submit', function(e) {
+        e.preventDefault();  // Prevent the form from submitting the traditional way
+
+        var id = $('#id').val();  // Get the ID of the reservation
+        var status = $('#status').val();  // Get the selected status
+
+        // AJAX request to update the status
+        $.ajax({
+            url: 'update_status.php',  // The PHP script to handle the update
+            type: 'POST',
+            data: {
+                id: id,  // Send the ID
+                status: status  // Send the new status
+            },
+            success: function(response) {
+                var data = JSON.parse(response);
+                if (data.success) {
+                    // Update the status in the table (without reloading the page)
+                    $('#status-' + id).text(status);  // Update status text
+                    $('#editStatusModal').modal('hide');  // Close the modal
+                    alert('Status updated successfully!');
+                } else {
+                    // Display error if update fails
+                    $('#modal-error-message').text(data.message).show();
+                }
+            },
+            error: function() {
+                $('#modal-error-message').text('An error occurred while updating the status.').show();
+            }
+        });
+    });
+
+    // Fill the modal with data when 'Edit' button is clicked
     $('.edit-status-btn').click(function () {
         var id = $(this).data('id');
         var lotId = $(this).data('lot-id');
         var name = $(this).data('name');
         var status = $(this).data('status');
 
-        // Set the values of the form fields in the modal
-        $('#reservationId').val(id);
+        // Populate modal fields with current reservation data
+        $('#id').val(id);
         $('#lotIdDisplay').val(lotId);
         $('#nameDisplay').val(name);
-        $('#status').val(status); // Set the current status in the dropdown
-    });
-
-    // Handle status change form submission
-    $('#editStatusForm').submit(function (e) {
-        e.preventDefault();
-
-        var id = $('#reservationId').val(); // Get the reservation ID
-        var status = $('#status').val(); // Get the new status
-
-        $.ajax({
-            url: 'update_status.php', // The PHP file to update the status
-            method: 'POST', // Send a POST request
-            data: { id: id, status: status }, // Send the ID and status
-            success: function (response) {
-                if (response === 'success') {
-                    $('#status-' + id).text(status); // Update the status in the table
-                    $('#editStatusModal').modal('hide'); // Close the modal
-                } else {
-                    $('#modal-error-message').text('Error updating status. Please try again.').show(); // Show an error message
-                }
-            },
-            error: function () {
-                $('#modal-error-message').text('An error occurred. Please try again.').show(); // Show an error message if the AJAX request fails
-            }
-        });
-    });
-
-    // Handle the Delete button action
-    $('.delete-btn').click(function () {
-        var id = $(this).data('id');
-        if (confirm('Are you sure you want to delete this reservation?')) {
-            $.ajax({
-                url: 'delete_reservation.php',
-                method: 'POST',
-                data: { id: id },
-                success: function (response) {
-                    if (response === 'success') {
-                        $('tr').find('button[data-id="' + id + '"]').closest('tr').remove(); // Remove the deleted reservation row
-                    } else {
-                        alert('Error deleting reservation.');
-                    }
-                }
-            });
-        }
-    });
-
-    // Handle the View button action
-    $('.view-btn').click(function () {
-        var id = $(this).data('id');
-
-        $.ajax({
-            url: 'view_reservation.php',
-            method: 'POST',
-            data: { id: id },
-            success: function (response) {
-                var reservation = JSON.parse(response);
-
-                $('#viewLotId').val(reservation.lot_id);
-                $('#viewName').val(reservation.name);
-                $('#viewEmail').val(reservation.email);
-                $('#viewContact').val(reservation.contact);
-                $('#viewDate').val(reservation.date);
-                $('#viewTime').val(reservation.time);
-                $('#viewStatus').val(reservation.status);
-                $('#viewCancellationReason').val(reservation.cancellation_reason);
-
-                $('#viewReservationModal').modal('show'); // Show the view modal
-            }
-        });
+        $('#status').val(status);  // Set the current status in the select dropdown
     });
 });
+
+
 </script>
 
 </body>
 </html>
+

@@ -1,45 +1,35 @@
 <?php
-// Database connection
+// Include your database connection
 $conn = new mysqli("localhost", "root", "", "push");
 
-// Check for connection errors
+// Check connection
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Check if id and status are provided via POST
+// Check if the required parameters are received via POST
 if (isset($_POST['id']) && isset($_POST['status'])) {
     $id = $_POST['id'];
     $status = $_POST['status'];
 
-    // Validate the status value to avoid any unexpected input
-    $valid_statuses = ['Approved', 'Rejected', 'In Processing']; // Adjust according to your allowed statuses
-    if (!in_array($status, $valid_statuses)) {
-        echo 'Invalid status'; // If the status is not valid, return an error message
-        exit;
-    }
+    // Update the reservation status in the database
+    $update_query = "UPDATE reservations SET status = ? WHERE id = ?";
+    $stmt = $conn->prepare($update_query);
+    $stmt->bind_param("si", $status, $id);
 
-    // Prepare the SQL query to update the reservation status
-    $query = "UPDATE reservations SET status = ? WHERE id = ?";
-    if ($stmt = $conn->prepare($query)) {
-        // Bind the parameters and execute the query
-        $stmt->bind_param("si", $status, $id);
-        
-        if ($stmt->execute()) {
-            echo 'success'; // Return success if the status was updated
-        } else {
-            echo 'error'; // Return error if the update failed
-        }
-
-        // Close the prepared statement
-        $stmt->close();
+    if ($stmt->execute()) {
+        // Return success response
+        echo json_encode(['success' => true]);
     } else {
-        echo 'error'; // Return error if the prepare statement failed
+        // Return error message if update failed
+        echo json_encode(['success' => false, 'message' => 'Failed to update status.']);
     }
 
-    // Close the database connection
+    // Close the statement and connection
+    $stmt->close();
     $conn->close();
 } else {
-    echo 'error'; // Return error if id or status is not provided
+    // Return error if required parameters are not provided
+    echo json_encode(['success' => false, 'message' => 'Invalid data received.']);
 }
 ?>

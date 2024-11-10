@@ -14,13 +14,13 @@ if ($conn->connect_error) {
 }
 
 // Check if reservation ID is passed
-if (isset($_POST['reservation_id'])) {
-    $reservation_id = $_POST['reservation_id'];
+if (isset($_POST['id'])) {
+    $id = $_POST['id'];
 
     // Query to fetch reservation details
     $sql = "SELECT * FROM reservations WHERE id = ?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $reservation_id); // Use the reservation ID as the parameter
+    $stmt->bind_param("i", $id); // Use the reservation ID as the parameter
     $stmt->execute();
     $result = $stmt->get_result();
 
