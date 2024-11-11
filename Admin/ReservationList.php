@@ -7,6 +7,9 @@ if ($conn->connect_error) {
 
 $reservations_query = "SELECT id, lot_id, name, email, contact, date, time, status FROM reservations";
 $reservations_result = $conn->query($reservations_query);
+
+$notifications_query = "SELECT id, lot_id, name, email, contact, status, message, notification_date, notification_time FROM notifications";
+$notifications_result = $conn->query($notifications_query);
 ?>
 
 <!DOCTYPE html>
@@ -43,6 +46,42 @@ $reservations_result = $conn->query($reservations_query);
                     <td><?php echo $row['contact']; ?></td>
                     <td><?php echo $row['date']; ?></td>
                     <td><?php echo $row['time']; ?></td>
+                    <td id="status-<?php echo $row['id']; ?>"><?php echo $row['status']; ?></td>
+                    <td>
+                        <button class="btn btn-warning btn-sm edit-status-btn" data-id="<?php echo $row['id']; ?>" data-lot-id="<?php echo $row['lot_id']; ?>" data-name="<?php echo $row['name']; ?>" data-status="<?php echo $row['status']; ?>" data-toggle="modal" data-target="#editStatusModal">Edit</button>
+                        <button class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $row['id']; ?>">Delete</button>
+                        <button class="btn btn-info btn-sm view-reservation-btn" data-id="<?php echo $row['id']; ?>">View</button>
+                    </td>
+                </tr>
+            <?php endwhile; ?>
+        </tbody>
+    </table>
+</div>
+
+<div class="container mt-5">
+    <h2>Updated List</h2>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Lot ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Message</th>
+                <th>notification_date</th>
+                <th>notification_time</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php while ($row = $notifications_result->fetch_assoc()): ?>
+                <tr>
+                    <td><?php echo $row['lot_id']; ?></td>
+                    <td><?php echo $row['name']; ?></td>
+                    <td><?php echo $row['email']; ?></td>
+                    <td><?php echo $row['message']; ?></td>
+                    <td><?php echo $row['notification_date']; ?></td>
+                    <td><?php echo $row['notification_time']; ?></td>
                     <td id="status-<?php echo $row['id']; ?>"><?php echo $row['status']; ?></td>
                     <td>
                         <button class="btn btn-warning btn-sm edit-status-btn" data-id="<?php echo $row['id']; ?>" data-lot-id="<?php echo $row['lot_id']; ?>" data-name="<?php echo $row['name']; ?>" data-status="<?php echo $row['status']; ?>" data-toggle="modal" data-target="#editStatusModal">Edit</button>
@@ -220,10 +259,14 @@ $(document).ready(function() {
         error: function() {
             alert('An error occurred while fetching reservation details.');
         }
+        
     });
+    
 });
 
 });
+
 </script>
+
 </body>
 </html>
