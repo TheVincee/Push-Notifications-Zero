@@ -243,6 +243,7 @@ include('db.php');
                         $('#viewContact').val(response.data.contact || '');
                         $('#viewDate').val(response.data.date || '');
                         $('#viewTime').val(response.data.time || '');
+                        $('#viewStatus').val(response.data.status || '');
                         $('#viewModal').modal('show');
                     } else {
                         alert('Error: ' + response.message);

@@ -47,7 +47,7 @@ $reservations_result = $conn->query($reservations_query);
                     <td>
                         <button class="btn btn-warning btn-sm edit-status-btn" data-id="<?php echo $row['id']; ?>" data-lot-id="<?php echo $row['lot_id']; ?>" data-name="<?php echo $row['name']; ?>" data-status="<?php echo $row['status']; ?>" data-toggle="modal" data-target="#editStatusModal">Edit</button>
                         <button class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $row['id']; ?>">Delete</button>
-                        <button class="btn btn-info btn-sm view-btn" data-id="<?php echo $row['id']; ?>">View</button>
+                        <button class="btn btn-info btn-sm view-reservation-btn" data-id="<?php echo $row['id']; ?>">View</button>
                     </td>
                 </tr>
             <?php endwhile; ?>
@@ -149,28 +149,25 @@ $reservations_result = $conn->query($reservations_query);
 $(document).ready(function() {
     // When the 'Save Changes' button is clicked in the Edit Status modal
     $('#editStatusForm').on('submit', function(e) {
-        e.preventDefault();  // Prevent the form from submitting the traditional way
+        e.preventDefault();
 
-        var id = $('#id').val();  // Get the ID of the reservation
-        var status = $('#status').val();  // Get the selected status
+        var id = $('#id').val();
+        var status = $('#status').val();
 
-        // AJAX request to update the status
         $.ajax({
-            url: 'update_status.php',  // The PHP script to handle the update
+            url: 'update_status.php',
             type: 'POST',
             data: {
-                id: id,  // Send the ID
-                status: status  // Send the new status
+                id: id,
+                status: status
             },
             success: function(response) {
                 var data = JSON.parse(response);
                 if (data.success) {
-                    // Update the status in the table (without reloading the page)
-                    $('#status-' + id).text(status);  // Update status text
-                    $('#editStatusModal').modal('hide');  // Close the modal
+                    $('#status-' + id).text(status);
+                    $('#editStatusModal').modal('hide');
                     alert('Status updated successfully!');
                 } else {
-                    // Display error if update fails
                     $('#modal-error-message').text(data.message).show();
                 }
             },
@@ -180,24 +177,53 @@ $(document).ready(function() {
         });
     });
 
-    // Fill the modal with data when 'Edit' button is clicked
+    // Fill the Edit Status modal with data when 'Edit' button is clicked
     $('.edit-status-btn').click(function () {
         var id = $(this).data('id');
         var lotId = $(this).data('lot-id');
         var name = $(this).data('name');
         var status = $(this).data('status');
 
-        // Populate modal fields with current reservation data
         $('#id').val(id);
         $('#lotIdDisplay').val(lotId);
         $('#nameDisplay').val(name);
-        $('#status').val(status);  // Set the current status in the select dropdown
+        $('#status').val(status);
+    });
+
+    // Fill the View Modal with data when 'View' button is clicked
+    $('.view-reservation-btn').click(function () {
+    var id = $(this).data('id');
+
+    $.ajax({
+        url: 'get_reservation_details.php',
+        type: 'POST',
+        data: { id: id },
+        success: function(response) {
+            var data = JSON.parse(response);
+
+            if (data.success) {
+                // Access nested data properties correctly
+                $('#viewLotId').val(data.data.lot_id || '');
+                $('#viewName').val(data.data.name || '');
+                $('#viewEmail').val(data.data.email || '');
+                $('#viewContact').val(data.data.contact || '');
+                $('#viewDate').val(data.data.reservation_date || '');
+                $('#viewTime').val(data.data.reservation_time || '');
+                $('#viewStatus').val(data.data.status || '');
+
+                // Show the modal after data is set
+                $('#viewReservationModal').modal('show');
+            } else {
+                alert(data.message || 'Error fetching reservation details.');
+            }
+        },
+        error: function() {
+            alert('An error occurred while fetching reservation details.');
+        }
     });
 });
 
-
+});
 </script>
-
 </body>
 </html>
-

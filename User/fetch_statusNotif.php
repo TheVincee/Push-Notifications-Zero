@@ -17,10 +17,10 @@ if ($conn->connect_error) {
     die(json_encode(["error" => "Connection failed: " . $conn->connect_error]));
 }
 
-// Adjust column names if you have specific date/time columns in your table.
-// Replace 'your_date_column' and 'your_time_column' with the actual column names for date and time.
+// Adjust the query to fetch only records with specific statuses
 $sql = "SELECT id, lot_id, name, status
         FROM reservations
+        WHERE status IN ('Approved', 'Reject', 'In Progress')
         ORDER BY id DESC"; // Order by ID if no date/time columns are available
 
 // Execute the query
