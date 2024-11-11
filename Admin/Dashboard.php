@@ -95,24 +95,19 @@ function fetchNotifications() {
     $.ajax({
         url: 'fetch_reservations.php', // The PHP file that fetches notifications
         type: 'GET',
-        dataType: 'json',
+        dataType: 'json', // Expecting JSON response
         data: {
             last_id: lastNotificationId  // Pass the last fetched notification ID to the server
         },
         success: function(data) {
-            // If there was an error in the response, log it
-            if (data.error) {
-                console.error('Error:', data.error);
-                return;
-            }
-
-            if (data.length > 0) {
+            // Check if the response is an array (valid notifications)
+            if (Array.isArray(data)) {
                 let unreadCount = 0;
                 $('#notification-modal').empty();  // Clear previous notifications in the modal
 
                 // Loop through each notification and display it
                 data.forEach(function(notification) {
-                    displayNotification(notification);
+                    displayNotification(notification); // Display the notification in the modal
                     if (notification.status === 'unread') {
                         unreadCount++; // Count unread notifications
                     }
@@ -123,10 +118,15 @@ function fetchNotifications() {
 
                 // Update the notification count on the bell icon
                 $('#notification-count').text(unreadCount);
+            } else if (data.error) {
+                console.error('Error in server response:', data.error);
+            } else {
+                console.error('Unexpected response format:', data);
             }
         },
         error: function(xhr, status, error) {
             console.error('Error fetching notifications:', error);
+            alert('Error fetching notifications. Please try again later.');
         }
     });
 }
@@ -176,35 +176,14 @@ $(document).on('click', '.notification-item', function() {
     // You can add code here to navigate to a specific page or open a detailed view
 });
 
-// Function to mark a notification as read (via a server request)
-function markAsRead(notificationId) {
-    $.ajax({
-        url: 'mark_as_read.php', // PHP file to handle marking as read
-        type: 'POST',
-        data: { id: notificationId }, // Send the notification ID
-        success: function(response) {
-            if (response === 'success') {
-                // Decrease the notification count after marking as read
-                $('#notification-count').text(parseInt($('#notification-count').text()) - 1);
-                // Optionally, change the background color of the notification to indicate it's read
-                $(`.notification-item[data-id=${notificationId}]`).css('background-color', '#f0f0f0');
-            } else {
-                console.error('Failed to mark notification as read');
-            }
-        },
-        error: function(xhr, status, error) {
-            console.error('Error marking notification as read:', error);
-        }
-    });
-}
-
-// Periodically check for new notifications every 30 seconds
-setInterval(fetchNotifications, 3000);
+// Periodically check for new notifications every 30 seconds (update to 30 seconds for reasonable frequency)
+setInterval(fetchNotifications, 30000);
 
 // Initial fetch of notifications when the page is loaded
 $(document).ready(function() {
     fetchNotifications(); // Fetch notifications as soon as the page is ready
 });
+
 </script>
 
 </body>

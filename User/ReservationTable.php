@@ -187,52 +187,48 @@ include('db.php');
 
 
 <script>
-   $(document).ready(function() {
+  $(document).ready(function() {
+    
     // Open view modal
-    // Open view modal
-$('.btn-view').on('click', function() {
-    var id = $(this).data('id');
-
-    // Make the AJAX request to fetch the reservation data
-    $.get('view_reservation.php', { id: id }, function(response) {
-        console.log(response);  // Log the response to inspect it
+    $('.btn-view').on('click', function() {
+        var id = $(this).data('id');
         
-        try {
-            var data = JSON.parse(response);  // Ensure the response is parsed correctly
-            if (data.success) {
-                // Populate the modal with the fetched data
-                $('#viewLotId').val(data.data.lot_id || '');  // Fallback to empty string if value is missing
-                $('#viewName').val(data.data.name || '');
-                $('#viewEmail').val(data.data.email || '');
-                $('#viewContact').val(data.data.contact || '');
-                $('#viewDate').val(data.data.date || '');
-                $('#viewTime').val(data.data.time || '');
-                
-                
-                // Show the modal
-                $('#viewModal').modal('show');
-            } else {
-                // If there's an error, you can show an alert or log an error message
-                alert('Error: ' + data.message);
+        // Make the AJAX request to fetch the reservation data
+        $.get('view_reservation.php', { id: id }, function(response) {
+            console.log(response);  // Log the response to inspect it
+            
+            try {
+                var data = JSON.parse(response);  // Ensure the response is parsed correctly
+                if (data.success) {
+                    // Populate the modal with the fetched data
+                    $('#viewLotId').val(data.data.lot_id || '');  // Fallback to empty string if value is missing
+                    $('#viewName').val(data.data.name || '');
+                    $('#viewEmail').val(data.data.email || '');
+                    $('#viewContact').val(data.data.contact || '');
+                    $('#viewDate').val(data.data.date || '');
+                    $('#viewTime').val(data.data.time || '');
+                    
+                    // Show the modal
+                    $('#viewModal').modal('show');
+                } else {
+                    // If there's an error, you can show an alert or log an error message
+                    alert('Error: ' + data.message);
+                }
+            } catch (e) {
+                console.error('Error parsing response:', e);
+                alert('An error occurred while fetching the reservation details.');
             }
-        } catch (e) {
-            console.error('Error parsing response:', e);
+        }).fail(function() {
+            // Handle AJAX failure
             alert('An error occurred while fetching the reservation details.');
-        }
-    }).fail(function() {
-        // Handle AJAX failure
-        alert('An error occurred while fetching the reservation details.');
+        });
     });
-});
 
-
-
-
-
-        // Open update modal
-        $('.btn-update').on('click', function() {
-            var id = $(this).data('id');
-            $.get('update_reservation.php', { id: id }, function(response) {
+    // Open update modal
+    $('.btn-update').on('click', function() {
+        var id = $(this).data('id');
+        $.get('update_reservation.php', { id: id }, function(response) {
+            try {
                 if (response.success) {
                     $('#updateId').val(response.data.id);
                     $('#updateLotId').val(response.data.lot_id);
@@ -242,63 +238,67 @@ $('.btn-view').on('click', function() {
                     $('#updateDate').val(response.data.date);
                     $('#updateTime').val(response.data.time);
                     $('#updateModal').modal('show');
-                }
-            });
-        });
-
-        // Update reservation
-        $('#updateButton').on('click', function() {
-            var id = $('#updateId').val();
-            var lot_id = $('#updateLotId').val();
-            var name = $('#updateName').val();
-            var email = $('#updateEmail').val();
-            var contact = $('#updateContact').val();
-            var date = $('#updateDate').val();
-            var time = $('#updateTime').val();
-            
-            $.post('update_reservation.php', {
-                id: id,
-                lot_id: lot_id,
-                name: name,
-                email: email,
-                contact: contact,
-                date: date,
-                time: time
-            }, function(response) {
-                if (response.success) {
-                    alert('Reservation updated successfully');
-                    location.reload(); // Reload page to show updated data
                 } else {
-                    alert(response.message);
+                    alert('Error: ' + response.message);  // Handle error in fetching reservation data
                 }
-            });
+            } catch (e) {
+                console.error('Error parsing response:', e);
+                alert('An error occurred while fetching reservation details for update.');
+            }
+        }).fail(function() {
+            alert('An error occurred while fetching reservation details.');
         });
+    });
 
-        // Delete reservation
-        $(document).ready(function() {
-    // Event listener for delete buttons
+    // Update reservation
+    $('#updateButton').on('click', function() {
+        var id = $('#updateId').val();
+        var lot_id = $('#updateLotId').val();
+        var name = $('#updateName').val();
+        var email = $('#updateEmail').val();
+        var contact = $('#updateContact').val();
+        var date = $('#updateDate').val();
+        var time = $('#updateTime').val();
+        
+        $.post('update_reservation.php', {
+            id: id,
+            lot_id: lot_id,
+            name: name,
+            email: email,
+            contact: contact,
+            date: date,
+            time: time
+        }, function(response) {
+            if (response.success) {
+                alert('Reservation updated successfully');
+                location.reload(); // Reload page to show updated data
+            } else {
+                alert('Error: ' + response.message);
+            }
+        }, 'json').fail(function() {
+            alert('Failed to update reservation.');
+        });
+    });
+
+    // Delete reservation
     $('.btn-delete').on('click', function() {
         var id = $(this).data('id'); // Assuming each delete button has a data-id attribute with the reservation ID
 
         if (confirm("Are you sure you want to delete this reservation?")) {
             $.post('delete_reservation.php', { id: id }, function(response) {
                 if (response.success) {
-                    alert(response.message);
+                    alert('Reservation deleted successfully');
                     location.reload(); // Reload the page to reflect changes
                 } else {
-                    alert(response.message || "An error occurred while deleting the reservation.");
+                    alert('Error: ' + response.message || "An error occurred while deleting the reservation.");
                 }
             }, 'json').fail(function() {
                 alert("Failed to communicate with the server. Please try again.");
             });
         }
     });
-});
 
-
-        // Cancel reservation
-        $(document).ready(function() {
-    // Click event for cancel buttons
+    // Cancel reservation
     $('.btn-cancel').on('click', function() {
         var id = $(this).data('id');
         var lotId = $(this).data('lot-id');  // Get lot_id from data attribute
@@ -311,7 +311,7 @@ $('.btn-view').on('click', function() {
         $('#cancelModal').modal('show');     // Show cancel modal
     });
 
-    // Click event for the confirmation button in the modal
+    // Handle the confirmation for cancellation
     $('#cancelButton').on('click', function() {
         var id = $(this).data('id');
         var reason = $('#cancelReason').val().trim();  // Get cancellation reason
@@ -326,16 +326,15 @@ $('.btn-view').on('click', function() {
                 alert('Reservation cancelled successfully. Lot ID: ' + response.lot_id + ', Name: ' + response.Name); 
                 location.reload();  // Reload page to reflect changes
             } else {
-                alert(response.message || "An error occurred while cancelling the reservation.");
+                alert('Error: ' + response.message || "An error occurred while cancelling the reservation.");
             }
         }, 'json').fail(function() {
             alert("Failed to communicate with the server. Please try again.");
         });
     });
+
 });
 
-
-    });
 </script>
 
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>

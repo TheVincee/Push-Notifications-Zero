@@ -14,7 +14,7 @@ if (isset($_POST['id']) && isset($_POST['reason'])) {
         
         if ($query->execute()) {
             // Successfully updated, now fetch lot_id and Name
-            $fetchQuery = $conn->prepare("SELECT lot_id, Name FROM reservations WHERE id = ?");
+            $fetchQuery = $conn->prepare("SELECT lot_id, Name, email, contact FROM reservations WHERE id = ?");
             
             if ($fetchQuery) {
                 $fetchQuery->bind_param("i", $id);
@@ -26,11 +26,24 @@ if (isset($_POST['id']) && isset($_POST['reason'])) {
 
                     // Check if Name is set and not empty
                     $name = isset($row['Name']) && !empty($row['Name']) ? $row['Name'] : "Name not available";
+                    $lot_id = $row['lot_id'];
+                    $email = $row['email'];
+                    $contact = $row['contact'];
+                    $status = 'Canceled';  // Status for cancellation notification
+                    $message = "Reservation ID $id has been canceled. Reason: $reason";
+
+                    // Insert notification for admin
+                    $notificationQuery = "INSERT INTO notifications (lot_id, name, email, contact, status, message, notification_date, notification_time) 
+                                          VALUES (?, ?, ?, ?, ?, ?, CURDATE(), CURTIME())";
+                    $notificationStmt = $conn->prepare($notificationQuery);
+                    $notificationStmt->bind_param("ssssss", $lot_id, $name, $email, $contact, $status, $message);
+                    $notificationStmt->execute();
+                    $notificationStmt->close();
 
                     // Encode response with success and fetched data
                     echo json_encode([
                         "status" => "success",
-                        "lot_id" => $row['lot_id'],
+                        "lot_id" => $lot_id,
                         "Name" => $name
                     ]);
                 } else {

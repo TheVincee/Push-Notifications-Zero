@@ -40,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $contact = $_POST['contact'] ?? '';
     $date = $_POST['date'] ?? '';
     $time = $_POST['time'] ?? '';
+    $status = "Updated";  // Set status for the notification
 
     if (!$id || empty($lot_id) || empty($name) || empty($email) || empty($contact) || empty($date) || empty($time)) {
         echo json_encode(['success' => false, 'message' => 'Please fill all required fields.']);
@@ -57,6 +58,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt->bind_param("ssssssi", $lot_id, $name, $email, $contact, $date, $time, $id);
 
     if ($stmt->execute()) {
+        // Prepare to insert a notification for the admin
+        $notificationQuery = "INSERT INTO notifications (lot_id, name, email, contact, status, message, notification_date, notification_time) 
+                              VALUES (?, ?, ?, ?, ?, ?, CURDATE(), CURTIME())";
+        $notificationStmt = $conn->prepare($notificationQuery);
+
+        if ($notificationStmt) {
+            $message = "User updated reservation ID $id";
+            $notificationStmt->bind_param("ssssss", $lot_id, $name, $email, $contact, $status, $message);
+            $notificationStmt->execute();
+            $notificationStmt->close();
+        }
+
         echo json_encode(['success' => true, 'message' => 'Reservation updated successfully!']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Error updating reservation.']);

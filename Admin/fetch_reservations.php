@@ -1,58 +1,51 @@
 <?php
-// Enable error reporting to catch any issues during development
-ini_set('display_errors', 1);
+// Enable error reporting to catch any issues
 error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-// Database connection setup
-$host = "localhost"; // Database host
-$username = "root"; // Database username
-$password = ""; // Database password (empty in your case)
-$dbname = "push"; // Database name
+// Include your database connection
+include 'db_connection.php';
 
-// Create a new connection to the database
-$mysqli = new mysqli($host, $username, $password, $dbname);
+// Initialize an array to store errors
+$response = [];
 
-// Check if the connection was successful
-if ($mysqli->connect_error) {
-    // If the connection fails, output a detailed error message
-    $error_message = "Connection failed: " . $mysqli->connect_error;
-    echo json_encode(["error" => $error_message]);
-    exit; // Exit to prevent further execution
+// Get the last fetched notification ID (default to 0 if not provided)
+$last_id = isset($_GET['last_id']) ? (int) $_GET['last_id'] : 0;
+
+// SQL query to fetch notifications after the last ID
+$sql = "SELECT id, lot_id, name, email, contact, status, message, notification_date, notification_time FROM notifications WHERE id > ? ORDER BY id ASC";
+$stmt = $conn->prepare($sql);
+
+// Check if the statement preparation failed
+if ($stmt === false) {
+    $response['error'] = 'SQL preparation failed: ' . $conn->error;
+    echo json_encode($response);
+    exit;
 }
 
-// SQL query to fetch all notifications ordered by ID in descending order
-$sql = "SELECT * FROM notifications ORDER BY id DESC";
+// Bind the last_id parameter to the SQL query
+$stmt->bind_param("i", $last_id);
+$stmt->execute();
+$result = $stmt->get_result();
 
-// Execute the query and store the result
-$result = $mysqli->query($sql);
-
-// Check if there was an error executing the SQL query
-if (!$result) {
-    // If the query fails, output an error message with the query error
-    $error_message = "SQL query failed: " . $mysqli->error;
-    echo json_encode(["error" => $error_message]);
-    exit; // Exit to stop further execution
-}
-
-// Initialize an empty array to hold the notifications
+// Check if there are any notifications
 $notifications = [];
-
-// If there are results, fetch each row and add it to the notifications array
-if ($result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $notifications[] = $row; // Add each row to the notifications array
-    }
-} else {
-    // If no results were found, we leave the notifications array empty
-    $notifications = [];
+while ($row = $result->fetch_assoc()) {
+    $notifications[] = $row;
 }
 
-// Set the content type header to JSON to tell the browser we're returning JSON data
+// If no notifications found, return a message
+if (empty($notifications)) {
+    $response['message'] = 'No new notifications';
+} else {
+    $response = $notifications; // Otherwise, return the notifications data
+}
+
+// Return the response as JSON
 header('Content-Type: application/json');
+echo json_encode($response);
 
-// Output the notifications array as JSON
-echo json_encode($notifications);
-
-// Close the database connection after we're done
-$mysqli->close();
+// Close database connections
+$stmt->close();
+$conn->close();
 ?>
