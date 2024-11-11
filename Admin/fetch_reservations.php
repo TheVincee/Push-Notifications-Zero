@@ -1,51 +1,51 @@
 <?php
-// Enable error reporting to catch any issues
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// Ensure proper content type for JSON response
+header('Content-Type: application/json');
 
 // Include your database connection
 include 'db_connection.php';
 
-// Initialize an array to store errors
+// Initialize the response
 $response = [];
 
 // Get the last fetched notification ID (default to 0 if not provided)
 $last_id = isset($_GET['last_id']) ? (int) $_GET['last_id'] : 0;
 
-// SQL query to fetch notifications after the last ID
-$sql = "SELECT id, lot_id, name, email, contact, status, message, notification_date, notification_time FROM notifications WHERE id > ? ORDER BY id ASC";
-$stmt = $conn->prepare($sql);
+// SQL query to fetch the count of new notifications
+$sql_count = "SELECT COUNT(id) AS new_count FROM notifications WHERE id > ?";
+$stmt_count = $conn->prepare($sql_count);
+$stmt_count->bind_param("i", $last_id);
+$stmt_count->execute();
+$result_count = $stmt_count->get_result();
+$count_row = $result_count->fetch_assoc();
 
-// Check if the statement preparation failed
-if ($stmt === false) {
-    $response['error'] = 'SQL preparation failed: ' . $conn->error;
-    echo json_encode($response);
-    exit;
-}
+// Get the count of new notifications
+$new_count = $count_row['new_count'];
 
-// Bind the last_id parameter to the SQL query
-$stmt->bind_param("i", $last_id);
-$stmt->execute();
-$result = $stmt->get_result();
+// SQL query to fetch the details of new notifications
+$sql_notifications = "SELECT id, lot_id, name, email, contact, status, message, notification_date, notification_time FROM notifications WHERE id > ? ORDER BY id ASC";
+$stmt_notifications = $conn->prepare($sql_notifications);
+$stmt_notifications->bind_param("i", $last_id);
+$stmt_notifications->execute();
+$result_notifications = $stmt_notifications->get_result();
 
-// Check if there are any notifications
+// If there are new notifications, fetch the data
 $notifications = [];
-while ($row = $result->fetch_assoc()) {
+while ($row = $result_notifications->fetch_assoc()) {
     $notifications[] = $row;
 }
 
-// If no notifications found, return a message
-if (empty($notifications)) {
-    $response['message'] = 'No new notifications';
-} else {
-    $response = $notifications; // Otherwise, return the notifications data
-}
+// Prepare the response to include the notifications and new count
+$response = [
+    'new_count' => $new_count,
+    'notifications' => $notifications
+];
 
 // Return the response as JSON
-header('Content-Type: application/json');
 echo json_encode($response);
 
 // Close database connections
-$stmt->close();
+$stmt_count->close();
+$stmt_notifications->close();
 $conn->close();
 ?>

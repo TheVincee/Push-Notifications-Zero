@@ -100,28 +100,28 @@ function fetchNotifications() {
             last_id: lastNotificationId  // Pass the last fetched notification ID to the server
         },
         success: function(data) {
-            // Check if the response is an array (valid notifications)
-            if (Array.isArray(data)) {
-                let unreadCount = 0;
+            // If the response is a plain ID (e.g., "123" or an object with just an id field)
+            if (data.id) {
+                console.log('Last notification ID:', data.id);
+                lastNotificationId = data.id;
+                return;
+            }
+
+            // If there is a new count of notifications
+            if (data.new_count > 0) {
+                let unreadCount = data.new_count; // Get the new notification count
+                $('#notification-count').text(unreadCount); // Update the notification count on the bell icon
                 $('#notification-modal').empty();  // Clear previous notifications in the modal
 
                 // Loop through each notification and display it
-                data.forEach(function(notification) {
+                data.notifications.forEach(function(notification) {
                     displayNotification(notification); // Display the notification in the modal
-                    if (notification.status === 'unread') {
-                        unreadCount++; // Count unread notifications
-                    }
                     if (notification.id > lastNotificationId) {
                         lastNotificationId = notification.id; // Update the last notification ID
                     }
                 });
-
-                // Update the notification count on the bell icon
-                $('#notification-count').text(unreadCount);
-            } else if (data.error) {
-                console.error('Error in server response:', data.error);
             } else {
-                console.error('Unexpected response format:', data);
+                $('#notification-count').text(0); // If no new notifications, set count to 0
             }
         },
         error: function(xhr, status, error) {
@@ -148,7 +148,6 @@ function displayNotification(notification) {
             <strong>Time:</strong> ${notification.notification_time}<br>
         </div>
     `;
-
     notificationModal.append(notificationElement); // Append the notification to the modal
 }
 
@@ -176,8 +175,8 @@ $(document).on('click', '.notification-item', function() {
     // You can add code here to navigate to a specific page or open a detailed view
 });
 
-// Periodically check for new notifications every 30 seconds (update to 30 seconds for reasonable frequency)
-setInterval(fetchNotifications, 30000);
+// Periodically check for new notifications every 30 seconds
+setInterval(fetchNotifications, 3000);
 
 // Initial fetch of notifications when the page is loaded
 $(document).ready(function() {
