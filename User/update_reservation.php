@@ -47,6 +47,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit();
     }
 
+    // Step 1: Check if the reservation status is 'Approved'
+    $statusCheckQuery = "SELECT status FROM reservations WHERE id = ?";
+    $statusStmt = $conn->prepare($statusCheckQuery);
+    $statusStmt->bind_param("i", $id);
+    $statusStmt->execute();
+    $statusResult = $statusStmt->get_result();
+    
+    if ($statusResult->num_rows > 0) {
+        $statusData = $statusResult->fetch_assoc();
+        
+        // If the status is 'Approved', do not allow the update
+        if ($statusData['status'] === 'Approved') {
+            echo json_encode(['success' => false, 'message' => 'This reservation has already been approved and cannot be updated.']);
+            exit();
+        }
+    }
+
+    // Step 2: If status is not 'Approved', proceed with the update
     $query = "UPDATE reservations SET lot_id = ?, name = ?, email = ?, contact = ?, date = ?, time = ? WHERE id = ?";
     $stmt = $conn->prepare($query);
 
