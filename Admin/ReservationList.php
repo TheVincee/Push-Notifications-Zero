@@ -1,15 +1,33 @@
 <?php 
+// Database connection
 $conn = new mysqli("localhost", "root", "", "push");
-
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-$reservations_query = "SELECT id, lot_id, name, email, contact, date, time, status FROM reservations";
-$reservations_result = $conn->query($reservations_query);
+// Query to join reservations and notifications based on lot_id
+$query = "SELECT 
+            reservations.id AS reservation_id,
+            reservations.lot_id,
+            reservations.name AS reservation_name,
+            reservations.date AS reservation_date,
+            reservations.time AS reservation_time,
+            reservations.email,
+            reservations.contact,
+            reservations.status,
+            reservations.cancellation_reason,
+            notifications.id AS notification_id,
+            notifications.name AS notification_name,
+            notifications.notification_status,
+            notifications.message,
+            notifications.notification_date,
+            notifications.notification_time
+          FROM reservations
+          LEFT JOIN notifications ON reservations.lot_id = notifications.lot_id";
 
-$notifications_query = "SELECT id, lot_id, name, email, contact, status, message, notification_date, notification_time FROM notifications";
-$notifications_result = $conn->query($notifications_query);
+$result = $conn->query($query);
+
+$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -28,68 +46,46 @@ $notifications_result = $conn->query($notifications_query);
         <thead>
             <tr>
                 <th>Lot ID</th>
-                <th>Name</th>
+                <th>Reservation Name</th>
                 <th>Email</th>
                 <th>Contact</th>
                 <th>Date</th>
                 <th>Time</th>
                 <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php while ($row = $reservations_result->fetch_assoc()): ?>
-                <tr>
-                    <td><?php echo $row['lot_id']; ?></td>
-                    <td><?php echo $row['name']; ?></td>
-                    <td><?php echo $row['email']; ?></td>
-                    <td><?php echo $row['contact']; ?></td>
-                    <td><?php echo $row['date']; ?></td>
-                    <td><?php echo $row['time']; ?></td>
-                    <td id="status-<?php echo $row['id']; ?>"><?php echo $row['status']; ?></td>
-                    <td>
-                        <button class="btn btn-warning btn-sm edit-status-btn" data-id="<?php echo $row['id']; ?>" data-lot-id="<?php echo $row['lot_id']; ?>" data-name="<?php echo $row['name']; ?>" data-status="<?php echo $row['status']; ?>" data-toggle="modal" data-target="#editStatusModal">Edit</button>
-                        <button class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $row['id']; ?>">Delete</button>
-                        <button class="btn btn-info btn-sm view-reservation-btn" data-id="<?php echo $row['id']; ?>">View</button>
-                    </td>
-                </tr>
-            <?php endwhile; ?>
-        </tbody>
-    </table>
-</div>
-
-<div class="container mt-5">
-    <h2>Updated List</h2>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Lot ID</th>
-                <th>Name</th>
-                <th>Email</th>
+                <th>Cancellation Reason</th>
+                <th>Notification Status</th>
                 <th>Message</th>
-                <th>notification_date</th>
-                <th>notification_time</th>
-                <th>Status</th>
+                <th>Notification Date</th>
+                <th>Notification Time</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-            <?php while ($row = $notifications_result->fetch_assoc()): ?>
-                <tr>
-                    <td><?php echo $row['lot_id']; ?></td>
-                    <td><?php echo $row['name']; ?></td>
-                    <td><?php echo $row['email']; ?></td>
-                    <td><?php echo $row['message']; ?></td>
-                    <td><?php echo $row['notification_date']; ?></td>
-                    <td><?php echo $row['notification_time']; ?></td>
-                    <td id="status-<?php echo $row['id']; ?>"><?php echo $row['status']; ?></td>
-                    <td>
-                        <button class="btn btn-warning btn-sm edit-status-btn" data-id="<?php echo $row['id']; ?>" data-lot-id="<?php echo $row['lot_id']; ?>" data-name="<?php echo $row['name']; ?>" data-status="<?php echo $row['status']; ?>" data-toggle="modal" data-target="#editStatusModal">Edit</button>
-                        <button class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $row['id']; ?>">Delete</button>
-                        <button class="btn btn-info btn-sm view-reservation-btn" data-id="<?php echo $row['id']; ?>">View</button>
-                    </td>
-                </tr>
-            <?php endwhile; ?>
+            <?php if ($result && $result->num_rows > 0): ?>
+                <?php while ($row = $result->fetch_assoc()): ?>
+                    <tr>
+                        <td><?php echo $row['lot_id']; ?></td>
+                        <td><?php echo $row['reservation_name']; ?></td>
+                        <td><?php echo $row['email']; ?></td>
+                        <td><?php echo $row['contact']; ?></td>
+                        <td><?php echo $row['reservation_date']; ?></td>
+                        <td><?php echo $row['reservation_time']; ?></td>
+                        <td id="status-<?php echo $row['reservation_id']; ?>"><?php echo $row['status']; ?></td>
+                        <td><?php echo $row['cancellation_reason'] ?: 'N/A'; ?></td>
+                        <td><?php echo $row['notification_status'] ?: 'N/A'; ?></td>
+                        <td><?php echo $row['message'] ?: 'N/A'; ?></td>
+                        <td><?php echo $row['notification_date'] ?: 'N/A'; ?></td>
+                        <td><?php echo $row['notification_time'] ?: 'N/A'; ?></td>
+                        <td>
+                            <button class="btn btn-warning btn-sm edit-status-btn" data-id="<?php echo $row['reservation_id']; ?>" data-status="<?php echo $row['status']; ?>" data-toggle="modal" data-target="#editStatusModal">Edit</button>
+                            <button class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $row['reservation_id']; ?>">Delete</button>
+                            <button class="btn btn-info btn-sm view-reservation-btn" data-id="<?php echo $row['reservation_id']; ?>">View</button>
+                        </td>
+                    </tr>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <tr><td colspan="13">No results found.</td></tr>
+            <?php endif; ?>
         </tbody>
     </table>
 </div>
@@ -106,19 +102,25 @@ $notifications_result = $conn->query($notifications_query);
             </div>
             <div class="modal-body">
                 <form id="editStatusForm">
+                    <!-- ID Field (Visible) -->
                     <div class="form-group">
-                        <label for="id">ID</label>
-                        <input type="text" class="form-control" id="id" name="id" readonly>
+                        <label for="idDisplay">ID</label>
+                        <input type="text" class="form-control" id="idDisplay" readonly>
                     </div>
-
+                    
+                    <!-- Lot ID Field (Visible) -->
                     <div class="form-group">
                         <label for="lotIdDisplay">Lot ID</label>
                         <input type="text" class="form-control" id="lotIdDisplay" readonly>
                     </div>
+
+                    <!-- Name Field (Visible) -->
                     <div class="form-group">
                         <label for="nameDisplay">Name</label>
                         <input type="text" class="form-control" id="nameDisplay" readonly>
                     </div>
+
+                    <!-- Status Field -->
                     <div class="form-group">
                         <label for="status">Status</label>
                         <select class="form-control" id="status">
@@ -127,6 +129,7 @@ $notifications_result = $conn->query($notifications_query);
                             <option value="Rejected">Rejected</option>
                         </select>
                     </div>
+                    
                     <button type="submit" class="btn btn-primary">Save Changes</button>
                     <div id="modal-error-message" class="text-danger mt-3" style="display:none;"></div>
                 </form>
@@ -134,6 +137,7 @@ $notifications_result = $conn->query($notifications_query);
         </div>
     </div>
 </div>
+
 
 <!-- View Reservation Modal -->
 <div class="modal fade" id="viewReservationModal" tabindex="-1" role="dialog" aria-labelledby="viewReservationModalLabel" aria-hidden="true">
@@ -147,13 +151,14 @@ $notifications_result = $conn->query($notifications_query);
             </div>
             <div class="modal-body">
                 <form>
+                    <!-- Include fields for lot ID, reservation name, email, contact, date, time, status, cancellation reason, notification details -->
                     <div class="form-group">
                         <label for="viewLotId">Lot ID</label>
                         <input type="text" class="form-control" id="viewLotId" readonly>
                     </div>
                     <div class="form-group">
-                        <label for="viewName">Name</label>
-                        <input type="text" class="form-control" id="viewName" readonly>
+                        <label for="viewReservationName">Reservation Name</label>
+                        <input type="text" class="form-control" id="viewReservationName" readonly>
                     </div>
                     <div class="form-group">
                         <label for="viewEmail">Email</label>
@@ -164,16 +169,36 @@ $notifications_result = $conn->query($notifications_query);
                         <input type="text" class="form-control" id="viewContact" readonly>
                     </div>
                     <div class="form-group">
-                        <label for="viewDate">Date</label>
-                        <input type="text" class="form-control" id="viewDate" readonly>
+                        <label for="viewReservationDate">Date</label>
+                        <input type="text" class="form-control" id="viewReservationDate" readonly>
                     </div>
                     <div class="form-group">
-                        <label for="viewTime">Time</label>
-                        <input type="text" class="form-control" id="viewTime" readonly>
+                        <label for="viewReservationTime">Time</label>
+                        <input type="text" class="form-control" id="viewReservationTime" readonly>
                     </div>
                     <div class="form-group">
                         <label for="viewStatus">Status</label>
                         <input type="text" class="form-control" id="viewStatus" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="viewCancellationReason">Cancellation Reason</label>
+                        <input type="text" class="form-control" id="viewCancellationReason" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="viewNotificationStatus">Notification Status</label>
+                        <input type="text" class="form-control" id="viewNotificationStatus" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="viewMessage">Message</label>
+                        <input type="text" class="form-control" id="viewMessage" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="viewNotificationDate">Notification Date</label>
+                        <input type="text" class="form-control" id="viewNotificationDate" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="viewNotificationTime">Notification Time</label>
+                        <input type="text" class="form-control" id="viewNotificationTime" readonly>
                     </div>
                 </form>
             </div>
@@ -186,84 +211,93 @@ $notifications_result = $conn->query($notifications_query);
 
 <script>
 $(document).ready(function() {
-    // When the 'Save Changes' button is clicked in the Edit Status modal
-    $('#editStatusForm').on('submit', function(e) {
+    // Show Edit Status Modal and pre-fill data
+    $('.edit-status-btn').click(function () {
+        var id = $(this).data('id');
+        var status = $(this).data('status');
+        var lot_id = $(this).data('lot-id');  // Fetch the lot_id
+        var name = $(this).data('name');      // Fetch the name
+        
+        // Set the ID, status, lot_id, and name in the modal form
+        $('#idDisplay').val(id);
+        $('#status').val(status);
+        $('#lotId').val(lot_id);  // Set lot_id in the modal
+        $('#name').val(name);      // Set name in the modal
+        $('#modal-error-message').hide(); // Hide any previous error messages
+    });
+
+    // Submit Edit Status form with AJAX
+    $('#editStatusForm').submit(function (e) {
         e.preventDefault();
-
-        var id = $('#id').val();
+        
+        // Get form values
+        var id = $('#idDisplay').val();
         var status = $('#status').val();
+        var lot_id = $('#lotId').val();  // Get lot_id from modal
+        var name = $('#name').val();      // Get name from modal
 
+        // AJAX request to update status
         $.ajax({
             url: 'update_status.php',
             type: 'POST',
-            data: {
-                id: id,
-                status: status
-            },
-            success: function(response) {
-                var data = JSON.parse(response);
-                if (data.success) {
+            data: { id: id, status: status, lot_id: lot_id, name: name },
+            dataType: 'json', // Expect JSON response
+            success: function (response) {
+                if (response.success) {
+                    // Update status in the table
                     $('#status-' + id).text(status);
-                    $('#editStatusModal').modal('hide');
-                    alert('Status updated successfully!');
+                    $('#editStatusModal').modal('hide'); // Close modal on success
                 } else {
-                    $('#modal-error-message').text(data.message).show();
+                    // Show error message if update fails
+                    $('#modal-error-message').text(response.error || 'Failed to update status.').show();
                 }
             },
-            error: function() {
-                $('#modal-error-message').text('An error occurred while updating the status.').show();
+            error: function () {
+                // General error handling
+                $('#modal-error-message').text('An error occurred while updating status. Please try again.').show();
             }
         });
     });
 
-    // Fill the Edit Status modal with data when 'Edit' button is clicked
-    $('.edit-status-btn').click(function () {
-        var id = $(this).data('id');
-        var lotId = $(this).data('lot-id');
-        var name = $(this).data('name');
-        var status = $(this).data('status');
-
-        $('#id').val(id);
-        $('#lotIdDisplay').val(lotId);
-        $('#nameDisplay').val(name);
-        $('#status').val(status);
-    });
-
-    // Fill the View Modal with data when 'View' button is clicked
+    // Show View Reservation Modal with AJAX
     $('.view-reservation-btn').click(function () {
-    var id = $(this).data('id');
+        var id = $(this).data('id');
 
-    $.ajax({
-        url: 'get_reservation_details.php',
-        type: 'POST',
-        data: { id: id },
-        success: function(response) {
-            var data = JSON.parse(response);
+        // AJAX request to fetch reservation details
+        $.ajax({
+            url: 'get_reservation_details.php',
+            type: 'POST',
+            data: { id: id },
+            dataType: 'json', // Expect JSON response
+            success: function (response) {
+                if (response.success) {
+                    // Populate modal fields with reservation data
+                    var data = response.data;
+                    $('#viewLotId').val(data.lot_id);
+                    $('#viewReservationName').val(data.name);
+                    $('#viewEmail').val(data.email);
+                    $('#viewContact').val(data.contact);
+                    $('#viewReservationDate').val(data.date);
+                    $('#viewReservationTime').val(data.time);
+                    $('#viewStatus').val(data.status);
+                    $('#viewCancellationReason').val(data.cancellation_reason || 'N/A');
+                    $('#viewNotificationStatus').val(data.notification_status || 'N/A');
+                    $('#viewMessage').val(data.message || 'N/A');
+                    $('#viewNotificationDate').val(data.notification_date || 'N/A');
+                    $('#viewNotificationTime').val(data.notification_time || 'N/A');
 
-            if (data.success) {
-                // Access nested data properties correctly
-                $('#viewLotId').val(data.data.lot_id || '');
-                $('#viewName').val(data.data.name || '');
-                $('#viewEmail').val(data.data.email || '');
-                $('#viewContact').val(data.data.contact || '');
-                $('#viewDate').val(data.data.reservation_date || '');
-                $('#viewTime').val(data.data.reservation_time || '');
-                $('#viewStatus').val(data.data.status || '');
-
-                // Show the modal after data is set
-                $('#viewReservationModal').modal('show');
-            } else {
-                alert(data.message || 'Error fetching reservation details.');
+                    // Show the view modal
+                    $('#viewReservationModal').modal('show');
+                } else {
+                    alert('Failed to retrieve reservation details.');
+                }
+            },
+            error: function () {
+                // General error handling
+                alert('An error occurred while fetching reservation details. Please try again.');
             }
-        },
-        error: function() {
-            alert('An error occurred while fetching reservation details.');
-        }
-        
+        });
     });
-    
-});
-
 });
 
 </script>

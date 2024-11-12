@@ -6,7 +6,25 @@ if ($conn->connect_error) {
 }
 
 $id = $_POST['id'];
-$query = "SELECT lot_id, name, email, contact, date, time, status FROM reservations WHERE id = ?";
+$query = "
+    SELECT 
+        reservations.lot_id, 
+        reservations.name, 
+        reservations.email, 
+        reservations.contact, 
+        reservations.date, 
+        reservations.time, 
+        reservations.status,
+        reservations.cancellation_reason,
+        notifications.notification_status,
+        notifications.message,
+        notifications.notification_date,
+        notifications.notification_time
+    FROM reservations
+    LEFT JOIN notifications ON reservations.lot_id = notifications.lot_id
+    WHERE reservations.id = ?
+";
+
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $id);
 $stmt->execute();
@@ -23,7 +41,12 @@ if ($result->num_rows > 0) {
             'contact' => $reservation['contact'],
             'reservation_date' => $reservation['date'],
             'reservation_time' => $reservation['time'],
-            'status' => $reservation['status']
+            'status' => $reservation['status'],
+            'cancellation_reason' => $reservation['cancellation_reason'] ?? 'N/A',
+            'notification_status' => $reservation['notification_status'] ?? 'N/A',
+            'message' => $reservation['message'] ?? 'N/A',
+            'notification_date' => $reservation['notification_date'] ?? 'N/A',
+            'notification_time' => $reservation['notification_time'] ?? 'N/A'
         ]
     ]);
 } else {
