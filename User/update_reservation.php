@@ -1,100 +1,106 @@
 <?php
-include 'db.php';  // Include your database connection file
+// Include the database connection file
+include 'db.php';
 
 header('Content-Type: application/json');
 
+// Handle GET requests for fetching reservation details
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    // Handle GET request to fetch reservation details
-    $id = isset($_GET['id']) ? intval($_GET['id']) : null;
+    $reservationId = isset($_GET['id']) ? intval($_GET['id']) : null;
 
-    if ($id) {
+    if ($reservationId) {
         $query = "SELECT * FROM reservations WHERE id = ?";
         $stmt = $conn->prepare($query);
 
+        // Check if the statement preparation was successful
         if (!$stmt) {
-            echo json_encode(['success' => false, 'message' => 'Database error preparing statement.']);
+            echo json_encode(['success' => false, 'message' => 'Error preparing database statement.']);
             exit();
         }
 
-        $stmt->bind_param("i", $id);
+        $stmt->bind_param("i", $reservationId);
         $stmt->execute();
         $result = $stmt->get_result();
 
+        // Check if a reservation was found
         if ($result->num_rows > 0) {
-            $data = $result->fetch_assoc();
-            echo json_encode(['success' => true, 'data' => $data]);
+            $reservationDetails = $result->fetch_assoc();
+            echo json_encode(['success' => true, 'data' => $reservationDetails]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Reservation not found.']);
         }
 
         $stmt->close();
     } else {
-        echo json_encode(['success' => false, 'message' => 'Invalid reservation ID.']);
+        echo json_encode(['success' => false, 'message' => 'Invalid reservation ID provided.']);
     }
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Handle POST request to update reservation details
-    $id = isset($_POST['id']) ? intval($_POST['id']) : null;
-    $lot_id = $_POST['lot_id'] ?? '';
-    $name = $_POST['name'] ?? '';
-    $email = $_POST['email'] ?? '';
-    $contact = $_POST['contact'] ?? '';
-    $date = $_POST['date'] ?? '';
-    $time = $_POST['time'] ?? '';
-    $status = "Updated";  // Set status for the notification
+}
+// Handle POST requests for updating reservation details
+elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $reservationId = isset($_POST['id']) ? intval($_POST['id']) : null;
+    $lotId = $_POST['lot_id'] ?? '';
+    $customerName = $_POST['name'] ?? '';
+    $customerEmail = $_POST['email'] ?? '';
+    $customerContact = $_POST['contact'] ?? '';
+    $reservationDate = $_POST['date'] ?? '';
+    $reservationTime = $_POST['time'] ?? '';
+    $notificationStatus = "Updated"; // Status for the notification
 
-    if (!$id || empty($lot_id) || empty($name) || empty($email) || empty($contact) || empty($date) || empty($time)) {
-        echo json_encode(['success' => false, 'message' => 'Please fill all required fields.']);
+    // Validate input fields
+    if (!$reservationId || empty($lotId) || empty($customerName) || empty($customerEmail) || empty($customerContact) || empty($reservationDate) || empty($reservationTime)) {
+        echo json_encode(['success' => false, 'message' => 'All fields are required.']);
         exit();
     }
 
     // Step 1: Check if the reservation status is 'Approved'
     $statusCheckQuery = "SELECT status FROM reservations WHERE id = ?";
     $statusStmt = $conn->prepare($statusCheckQuery);
-    $statusStmt->bind_param("i", $id);
+    $statusStmt->bind_param("i", $reservationId);
     $statusStmt->execute();
     $statusResult = $statusStmt->get_result();
-    
+
     if ($statusResult->num_rows > 0) {
         $statusData = $statusResult->fetch_assoc();
-        
-        // If the status is 'Approved', do not allow the update
+
+        // Prevent updates if the reservation is already approved
         if ($statusData['status'] === 'Approved') {
-            echo json_encode(['success' => false, 'message' => 'This reservation has already been approved and cannot be updated.']);
+            echo json_encode(['success' => false, 'message' => 'This reservation has been approved and cannot be updated.']);
             exit();
         }
     }
 
-    // Step 2: If status is not 'Approved', proceed with the update
-    $query = "UPDATE reservations SET lot_id = ?, name = ?, email = ?, contact = ?, date = ?, time = ? WHERE id = ?";
-    $stmt = $conn->prepare($query);
+    // Step 2: Proceed with the update if the status is not 'Approved'
+    $updateQuery = "UPDATE reservations SET lot_id = ?, name = ?, email = ?, contact = ?, date = ?, time = ? WHERE id = ?";
+    $updateStmt = $conn->prepare($updateQuery);
 
-    if (!$stmt) {
-        echo json_encode(['success' => false, 'message' => 'Database error preparing statement.']);
+    if (!$updateStmt) {
+        echo json_encode(['success' => false, 'message' => 'Error preparing database statement for update.']);
         exit();
     }
 
-    $stmt->bind_param("ssssssi", $lot_id, $name, $email, $contact, $date, $time, $id);
+    $updateStmt->bind_param("ssssssi", $lotId, $customerName, $customerEmail, $customerContact, $reservationDate, $reservationTime, $reservationId);
 
-    if ($stmt->execute()) {
-        // Prepare to insert a notification for the admin
-        $notificationQuery = "INSERT INTO notifications (lot_id, name, email, contact, status, message, notification_date, notification_time) 
+    // Execute the update and handle notifications
+    if ($updateStmt->execute()) {
+        $notificationQuery = "INSERT INTO notifications (lot_id, name, email, contact, notification_status, message, notification_date, notification_time) 
                               VALUES (?, ?, ?, ?, ?, ?, CURDATE(), CURTIME())";
         $notificationStmt = $conn->prepare($notificationQuery);
 
         if ($notificationStmt) {
-            $message = "User updated reservation ID $id";
-            $notificationStmt->bind_param("ssssss", $lot_id, $name, $email, $contact, $status, $message);
+            $notificationMessage = "User updated reservation ID $reservationId";
+            $notificationStmt->bind_param("ssssss", $lotId, $customerName, $customerEmail, $customerContact, $notificationStatus, $notificationMessage);
             $notificationStmt->execute();
             $notificationStmt->close();
         }
 
-        echo json_encode(['success' => true, 'message' => 'Reservation updated successfully!']);
+        echo json_encode(['success' => true, 'message' => 'Reservation updated successfully.']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Error updating reservation.']);
     }
 
-    $stmt->close();
+    $updateStmt->close();
 } else {
+    // Handle unsupported request methods
     echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
 }
 ?>

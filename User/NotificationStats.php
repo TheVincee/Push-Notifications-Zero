@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>user - Notifications</title>
+    <title>User - Notifications</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         /* Bell Icon Style */
@@ -28,14 +28,14 @@
             font-size: 12px;
         }
 
-        /* Centered Notification Modal */
+        /* Notification Modal Style */
         #notification-modal {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             width: 300px;
-            background-color: white;
+            background-color: #fff;
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
             border-radius: 5px;
             display: none;
@@ -61,7 +61,7 @@
             background-color: #f9f9f9;
         }
 
-        /* Overlay to dim the background */
+        /* Overlay for Background */
         #overlay {
             position: fixed;
             top: 0;
@@ -76,46 +76,43 @@
 </head>
 <body>
 
-<!-- Bell Icon for Notifications -->
+<!-- Notification Bell -->
 <div id="notification-bell">
-    🔔 <!-- Bell icon (can be replaced with an actual icon/image) -->
-    <span class="notification-count" id="notification-count">0</span> <!-- Notification count -->
+    🔔 <!-- Replace with an icon/image if preferred -->
+    <span class="notification-count" id="notification-count">0</span>
 </div>
 
-<!-- Notification Modal in Center -->
-<div id="overlay"></div> <!-- Overlay background to dim the rest of the page -->
-<div id="notification-modal"></div> <!-- Modal to display notifications -->
+<!-- Notification Modal -->
+<div id="overlay"></div>
+<div id="notification-modal"></div>
 
 <script>
+    // Track the last notification ID to avoid reloading the same notifications
     let lastNotificationId = 0;
 
     // Function to fetch notifications from the server
     function fetchNotifications() {
         $.ajax({
-            url: 'fetch_statusNotif.php', // The PHP file that fetches notifications
+            url: 'fetch_statusNotif.php', // PHP script to get notifications
             type: 'GET',
             dataType: 'json',
-            data: {
-                last_id: lastNotificationId  // Pass the last fetched notification ID to the server
-            },
-            success: function(data) {
-                if (data.length > 0) {
-                    let unreadCount = 0;
-                    $('#notification-modal').empty();  // Clear previous notifications in the modal
+            data: { last_id: lastNotificationId },
+            success: function(notifications) {
+                if (notifications.length > 0) {
+                    const statusCount = { 'Approved': 0, 'Reject': 0, 'In Progress': 0 };
 
-                    // Loop through each notification and display it
-                    data.forEach(function(notification) {
+                    $('#notification-modal').empty(); // Clear current modal content
+
+                    // Process and display each notification
+                    notifications.forEach(notification => {
                         displayNotification(notification);
-                        if (notification.status === 'unread') {
-                            unreadCount++; // Count unread notifications
-                        }
-                        if (notification.id > lastNotificationId) {
-                            lastNotificationId = notification.id; // Update the last notification ID
-                        }
+                        statusCount[notification.status] = (statusCount[notification.status] || 0) + 1;
+                        lastNotificationId = Math.max(lastNotificationId, notification.id);
                     });
 
-                    // Update the notification count on the bell icon
-                    $('#notification-count').text(unreadCount > 0 ? unreadCount : '');
+                    // Update notification count on the bell
+                    const totalCount = Object.values(statusCount).reduce((sum, count) => sum + count, 0);
+                    $('#notification-count').text(totalCount > 0 ? totalCount : '');
                 }
             },
             error: function(xhr, status, error) {
@@ -124,77 +121,41 @@
         });
     }
 
-    // Function to display individual notification in the modal
+    // Function to display a notification item in the modal
     function displayNotification(notification) {
-        const notificationModal = $('#notification-modal');
-        
-        // Create a notification item with relevant details (clickable)
         const notificationElement = `
             <div class="notification-item" data-id="${notification.id}" data-status="${notification.status}">
                 <strong>Lot ID:</strong> ${notification.lot_id}<br>
                 <strong>Name:</strong> ${notification.name}<br>
-                <strong>Status:</strong> ${notification.status}<br>
+                <strong>Status:</strong> ${notification.status}
             </div>
         `;
-
-        notificationModal.append(notificationElement); // Append the notification to the modal
+        $('#notification-modal').append(notificationElement);
     }
 
-    // Toggle the visibility of the notification modal and overlay
+    // Toggle modal visibility
     $('#notification-bell').on('click', function() {
-        $('#notification-modal, #overlay').toggle(); // Show/hide modal and overlay
+        $('#notification-modal, #overlay').toggle();
     });
 
-    // Hide the modal and overlay when clicking outside the modal (on the overlay)
+    // Close modal when clicking the overlay
     $('#overlay').on('click', function() {
-        $('#notification-modal, #overlay').hide(); // Close the modal when clicking on overlay
+        $('#notification-modal, #overlay').hide();
     });
 
-    // Handle clicking on individual notifications
+    // Handle notification click event
     $(document).on('click', '.notification-item', function() {
         const notificationId = $(this).data('id');
         const notificationStatus = $(this).data('status');
-
-        // Mark the notification as read if it’s unread
-        if (notificationStatus === 'unread') {
-            markAsRead(notificationId);
-        }
-
-        alert(`Notification clicked with ID: ${notificationId}`);
-        // You can add code here to navigate to a specific page or open a detailed view
+        alert(`Notification clicked with ID: ${notificationId} and Status: ${notificationStatus}`);
+        // Add logic here to navigate or display detailed information
     });
 
-    // Function to mark a notification as read (via a server request)
-    function markAsRead(notificationId) {
-        $.ajax({
-            url: 'mark_as_read.php', // PHP file to handle marking as read
-            type: 'POST',
-            data: { id: notificationId }, // Send the notification ID
-            success: function(response) {
-                if (response === 'success') {
-                    // Decrease the notification count after marking as read
-                    const currentCount = parseInt($('#notification-count').text());
-                    $('#notification-count').text(currentCount > 1 ? currentCount - 1 : '');
-
-                    // Optionally, change the background color of the notification to indicate it's read
-                    $(`.notification-item[data-id=${notificationId}]`).css('background-color', '#f0f0f0');
-                } else {
-                    console.error('Failed to mark notification as read');
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error marking notification as read:', error);
-            }
-        });
-    }
-
-    // Periodically check for new notifications every 3 seconds
+    // Fetch notifications at regular intervals (every 3 seconds)
     setInterval(fetchNotifications, 3000);
 
-    // Initial fetch of notifications when the page is loaded
-    $(document).ready(function() {
-        fetchNotifications(); // Fetch notifications as soon as the page is ready
-    });
+    // Initial notification fetch on page load
+    $(document).ready(fetchNotifications);
 </script>
 
 </body>

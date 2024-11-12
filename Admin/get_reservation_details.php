@@ -1,58 +1,50 @@
 <?php
-$conn = new mysqli("localhost", "root", "", "push");
+// Database connection details
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "push"; // Replace with the actual database name
 
+// Create a connection to the database
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check if the connection was successful
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-$id = $_POST['id'];
-$query = "
-    SELECT 
-        reservations.lot_id, 
-        reservations.name, 
-        reservations.email, 
-        reservations.contact, 
-        reservations.date, 
-        reservations.time, 
-        reservations.status,
-        reservations.cancellation_reason,
-        notifications.notification_status,
-        notifications.message,
-        notifications.notification_date,
-        notifications.notification_time
-    FROM reservations
-    LEFT JOIN notifications ON reservations.lot_id = notifications.lot_id
-    WHERE reservations.id = ?
-";
+// Check if a reservation ID was provided in the POST request
+if (isset($_POST['reservation_id'])) {
+    // Sanitize and assign the reservation ID
+    $reservation_id = (int) $_POST['reservation_id'];
 
-$stmt = $conn->prepare($query);
-$stmt->bind_param("i", $id);
-$stmt->execute();
-$result = $stmt->get_result();
+    // Prepare a SQL query to retrieve reservation details using a prepared statement
+    $sql = "SELECT * FROM reservations WHERE id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $reservation_id); // Bind the reservation ID as an integer parameter
 
-if ($result->num_rows > 0) {
-    $reservation = $result->fetch_assoc();
-    echo json_encode([
-        'success' => true,
-        'data' => [
-            'lot_id' => $reservation['lot_id'],
-            'name' => $reservation['name'],
-            'email' => $reservation['email'],
-            'contact' => $reservation['contact'],
-            'reservation_date' => $reservation['date'],
-            'reservation_time' => $reservation['time'],
-            'status' => $reservation['status'],
-            'cancellation_reason' => $reservation['cancellation_reason'] ?? 'N/A',
-            'notification_status' => $reservation['notification_status'] ?? 'N/A',
-            'message' => $reservation['message'] ?? 'N/A',
-            'notification_date' => $reservation['notification_date'] ?? 'N/A',
-            'notification_time' => $reservation['notification_time'] ?? 'N/A'
-        ]
-    ]);
+    // Execute the query
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    // Check if any reservation was found
+    if ($result->num_rows > 0) {
+        $reservation = $result->fetch_assoc(); // Fetch reservation details as an associative array
+
+        // Respond with reservation data in JSON format
+        echo json_encode(['success' => true, 'data' => $reservation]);
+    } else {
+        // Respond with an error if no reservation was found
+        echo json_encode(['success' => false, 'error' => 'Reservation not found']);
+    }
+
+    // Close the prepared statement
+    $stmt->close();
 } else {
-    echo json_encode(['success' => false, 'message' => 'No reservation found.']);
+    // Respond with an error if reservation ID is missing
+    echo json_encode(['success' => false, 'error' => 'Reservation ID not provided']);
 }
 
-$stmt->close();
+// Close the database connection
 $conn->close();
 ?>

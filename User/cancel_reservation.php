@@ -1,35 +1,35 @@
 <?php
-include 'db.php'; // Assuming your database connection details are in db.php
+// Include the database connection
+include 'db.php';
 
-// Check if required POST parameters are set
+// Check if required POST parameters are provided
 if (isset($_POST['id']) && isset($_POST['reason'])) {
-    // Get data from AJAX request
     $id = $_POST['id'];
     $reason = $_POST['reason'];
 
-    // Prepare and execute SELECT query to check current status
+    // Check the current status of the reservation
     $statusQuery = $conn->prepare("SELECT status FROM reservations WHERE id = ?");
     if ($statusQuery) {
         $statusQuery->bind_param("i", $id);
         $statusQuery->execute();
         $statusResult = $statusQuery->get_result();
 
+        // Proceed if reservation exists
         if ($statusResult->num_rows > 0) {
-            $row = $statusResult->fetch_assoc();
-            $currentStatus = $row['status'];
+            $reservation = $statusResult->fetch_assoc();
+            $currentStatus = $reservation['status'];
 
-            // Check if the current status is 'Approved'
+            // Prevent cancellation if status is 'Approved'
             if ($currentStatus == 'Approved') {
                 echo json_encode(["status" => "error", "message" => "Cannot cancel an approved reservation."]);
             } else {
-                // Proceed with cancellation if the status is not 'Approved'
-                // Prepare and execute UPDATE query
-                $query = $conn->prepare("UPDATE reservations SET status = 'Canceled', cancellation_reason = ? WHERE id = ?");
-                if ($query) {
-                    $query->bind_param("si", $reason, $id);
-                    
-                    if ($query->execute()) {
-                        // Successfully updated, now fetch lot_id and Name
+                // Update reservation status to 'Canceled' with the reason
+                $updateQuery = $conn->prepare("UPDATE reservations SET status = 'Canceled', cancellation_reason = ? WHERE id = ?");
+                if ($updateQuery) {
+                    $updateQuery->bind_param("si", $reason, $id);
+
+                    if ($updateQuery->execute()) {
+                        // Retrieve additional reservation details for notification
                         $fetchQuery = $conn->prepare("SELECT lot_id, Name, email, contact FROM reservations WHERE id = ?");
                         
                         if ($fetchQuery) {
@@ -38,60 +38,59 @@ if (isset($_POST['id']) && isset($_POST['reason'])) {
                             $result = $fetchQuery->get_result();
 
                             if ($result->num_rows > 0) {
-                                $row = $result->fetch_assoc();
+                                $reservationDetails = $result->fetch_assoc();
 
-                                // Check if Name is set and not empty
-                                $name = isset($row['Name']) && !empty($row['Name']) ? $row['Name'] : "Name not available";
-                                $lot_id = $row['lot_id'];
-                                $email = $row['email'];
-                                $contact = $row['contact'];
-                                $status = 'Canceled';  // Status for cancellation notification
+                                // Handle cases where Name is not set or is empty
+                                $name = !empty($reservationDetails['Name']) ? $reservationDetails['Name'] : "Name not available";
+                                $lot_id = $reservationDetails['lot_id'];
+                                $email = $reservationDetails['email'];
+                                $contact = $reservationDetails['contact'];
+                                $status = 'Canceled';
                                 $message = "Reservation ID $id has been canceled. Reason: $reason";
 
-                                // Insert notification for admin
-                                $notificationQuery = "INSERT INTO notifications (lot_id, name, email, contact, status, message, notification_date, notification_time) 
-                                                      VALUES (?, ?, ?, ?, ?, ?, CURDATE(), CURTIME())";
+                                // Insert a cancellation notification for the admin
+                                $notificationQuery = "
+                                    INSERT INTO notifications (lot_id, name, email, contact, notification_status, message, notification_date, notification_time) 
+                                    VALUES (?, ?, ?, ?, ?, ?, CURDATE(), CURTIME())
+                                ";
                                 $notificationStmt = $conn->prepare($notificationQuery);
                                 $notificationStmt->bind_param("ssssss", $lot_id, $name, $email, $contact, $status, $message);
                                 $notificationStmt->execute();
                                 $notificationStmt->close();
 
-                                // Encode response with success and fetched data
+                                // Send a success response with fetched data
                                 echo json_encode([
                                     "status" => "success",
                                     "lot_id" => $lot_id,
                                     "Name" => $name
                                 ]);
                             } else {
-                                // No record found
+                                // No reservation record found
                                 echo json_encode(["status" => "error", "message" => "Record not found."]);
                             }
                         } else {
                             echo json_encode(["status" => "error", "message" => "Failed to prepare fetch query."]);
                         }
                     } else {
-                        // Error updating reservation
+                        // Handle failure to update reservation status
                         echo json_encode(["status" => "error", "message" => "Failed to cancel reservation."]);
                     }
+                    // Close update and fetch statements
+                    $updateQuery->close();
+                    if (isset($fetchQuery)) $fetchQuery->close();
                 } else {
                     echo json_encode(["status" => "error", "message" => "Failed to prepare update query."]);
                 }
-
-                // Close the statement
-                $query->close();
-                if (isset($fetchQuery)) $fetchQuery->close();
             }
         } else {
             echo json_encode(["status" => "error", "message" => "Record not found."]);
         }
-
         $statusQuery->close();
     } else {
         echo json_encode(["status" => "error", "message" => "Failed to prepare status query."]);
     }
-
 } else {
-    // Missing required parameters
+    // Handle missing parameters in request
     echo json_encode(["status" => "error", "message" => "Invalid request. Missing parameters."]);
 }
 
